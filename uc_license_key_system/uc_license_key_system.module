@@ -1,0 +1,118 @@
+<?php
+
+  function license_key_activation_store_license_key($data, $tokens, $license_key){
+	$row = array(
+		 'order_id' => $tokens["order_num"],
+		    'create_date' => strtotime("now"),
+		    'license' => $license_key,
+			'unique_customer_token' => $data,
+			'customer_email' => $tokens["email"],
+			'computer_user_name' => $tokens["username"],
+			'computer_mac_address' => $tokens["mac_addr"],
+  	);
+  	$result = drupal_write_record('license_t', $row);
+	// print ("result = " . $result . "\n");	
+	return $result; 
+  }
+
+  function license_key_activation_is_usage_limit_exceeded($order_number){
+	$usage_limit = 5; //times per year per order
+	$query = db_query('SELECT count(*) FROM license_t n 
+	         WHERE n.order_id  = \'%d\'
+			 AND   n.create_date > \'%s\'', $order_number, strtotime("1 year ago"));
+	$result =  db_fetch_array($query);
+	// print t("result = " . print_r($result) . "\n");
+	$count = $result["count(*)"];
+	// print("usage_limit = " . $usage_limit);
+	// print("count = " . $count);
+	if($count >= $usage_limit){
+	  return true;
+	}else{
+	  return false; 		
+	}  
+  }
+
+  function license_key_activation_is_valid_order($order_email, $order_number){
+	$query = db_query('SELECT count(*) FROM uc_orders n 
+	         WHERE n.order_id = \'%d\' 
+	         AND n.primary_email = \'%s\' 
+			 AND n.order_status IN (\'completed\')',
+			$order_number, $order_email);
+			
+	$result =  db_fetch_array($query);
+	$count = $result["count(*)"];
+	if($count == 0){
+	  return false;
+	}else{
+	  return true; 		
+	} 
+  }
+  function license_key_activation_is_revoked($order_email, $order_number){
+	$query = db_query('SELECT count(*) FROM revoked_license_t n 
+	         WHERE n.revoked_order_number = \'%d\' 
+	         OR n.revoked_email = \'%s\'', $order_number, $order_email);
+	$result =  db_fetch_array($query);
+	// print t("result = " . print_r($result) . "\n");
+	$count = $result["count(*)"];
+	if($count == 0){
+	  return false;
+	}else{
+	  return true; 		
+	}
+  }
+
+  function license_key_activation_is_duplicate_request($data){
+	$query = db_query('SELECT count(*) FROM license_t n 
+	         WHERE n.unique_customer_token  = \'%s\'', $data);
+	$result =  db_fetch_array($query);
+	// print t("result = " . print_r($result) . "\n");
+	$count = $result["count(*)"];
+	if($count == 0){
+	  return false;
+	}else{
+	  return true; 		
+	}
+  }
+
+  function license_key_activation_license_lookup($data){
+	$query = db_query('SELECT * FROM license_t n 
+	         WHERE n.unique_customer_token  = \'%s\'', $data);
+	$result =  db_fetch_array($query);
+	// print t("result = " . print_r($result) . "\n");
+	$license = $result["license"];
+	return $license;
+  }
+
+  function license_key_activation_tokenize_unique_id($data){
+    //parse the tokens from the unique id
+    $tokens = preg_split( '/[:]/', $data );
+	// print t("tokens = " . count($tokens) . "\n");
+	if(count($tokens) != 4){
+		print t(" status : Error: Please contact customersupport@yoursite.com \n key : \n");
+     	exit();
+	}
+    $result = array(
+	    		"email" => $tokens[0],
+				"order_num" => $tokens[1],
+			    "mac_addr" => $tokens[2],
+			    "username" => $tokens[3],			
+			);
+	// print t("result = " . print_r($result) . "\n");
+	return $result;
+  }
+  function license_key_activation_generate_license_key($data){
+	// fetch private key from file and ready it
+	$filename = "/home/you/yoursite.com/openssl/private.pem";
+	$fp = fopen($filename, "r");
+	$private_key = fread($fp, filesize($filename));
+	fclose($fp);
+	//$pkeyid = openssl_get_privatekey($priv_key);
+
+	$binary_signature = "";
+	$ok = openssl_sign($data, $binary_signature, $private_key, OPENSSL_ALGO_SHA1);
+	//echo 'binary' . $binary_siganture;
+	//echo 'algo' . OPENSSL_ALGO_SHA1;
+	// print t("status: $ok\n");
+    return base64_encode($binary_signature);
+  }
+?>

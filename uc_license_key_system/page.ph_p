@@ -1,0 +1,44 @@
+<?php
+  // simply create a page with the following php body in the drupal admin content creation page.
+
+  $data = $_REQUEST['data'];
+  //$data = "12345|something@something.com|00:22:41:2c:11:54|somebody";
+  $tokens = license_key_activation_tokenize_unique_id($data);
+  
+  //check for revocation
+  if(license_key_activation_is_revoked($tokens["email"], $tokens["order_num"])){
+     print t(" status : This License Has Been Revoked\n key : \n");
+     exit();
+  }
+  
+  //check for unique token already in license table
+  if(license_key_activation_is_duplicate_request($data)){
+     print t(" status : Activated. Thank you for your support! \n");
+     print t(" key : " . license_key_activation_license_lookup($data) . "\n");
+     exit();
+  }
+
+  //look for valid order_num and email in order_t
+  if(!license_key_activation_is_valid_order($tokens["email"], $tokens["order_num"])){
+     print t(" status : Incorrect Email or Order Number\n key : \n");
+     exit();
+  }    
+  
+  //check usage limit exceeded
+  if(license_key_activation_is_usage_limit_exceeded($tokens["order_num"])){
+     print t(" status : Usage Limit Exceeded\n key : \n");
+     exit();
+  }  
+
+  // if you got this far you are a valid request!
+
+  //generate license key
+  $license_key = license_key_activation_generate_license_key($data);
+  
+  //store it in the key table
+  license_key_activation_store_license_key($data, $tokens, $license_key);
+  
+  //return status + key
+  print t(" status : Activated. Thank you for your support!\n key : " . $license_key . "\n");
+  exit();
+?>

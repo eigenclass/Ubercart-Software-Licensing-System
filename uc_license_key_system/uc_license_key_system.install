@@ -1,0 +1,123 @@
+<?php
+// $Id: license_key_activation.install, Exp $
+
+/**
+ * @file
+ * license_key_activation module install file.
+ */
+
+/**
+ * Implementation of hook_schema().
+ */
+function license_key_activation_schema() {
+  $schema['license_t'] = array(
+    'description' => 'Stores information for generated license keys.',
+    'fields' => array(
+      'license_id' => array(
+        'description' => 'The license table primary key.',
+        'type' => 'serial',
+        'not null' => TRUE,
+      ),
+      'order_id' => array(
+        'description' => 'The drupal ubercart order number associated with the license',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+	  'create_date' => array(
+	    'description' => 'The unix creation timestamp for the license',
+	    'type' => 'int',
+	    'not null' => TRUE,
+	    'default' => 0,
+      ),
+	  'license' => array(
+	    'description' => 'The license',
+	    'type' => 'varchar',
+	    'length' => 512,
+	    'not null' => TRUE,
+	    'default' => '0',
+	  ),
+	  'unique_customer_token' => array(
+	    'description' => 'unique_customer_token: email_ordercode_macaddress_nicaddress_username_etc',
+	    'type' => 'varchar',
+	    'length' => 512,
+	    'not null' => TRUE,
+	    'default' => '0',
+	  ),
+	  'customer_email' => array(
+	    'description' => 'The customer email for this license',
+	    'type' => 'varchar',
+	    'length' => 32,
+	    'not null' => TRUE,
+	    'default' => '0',
+	  ),
+	  'computer_user_name' => array(
+	    'description' => 'The computer username used for this license',
+	    'type' => 'varchar',
+	    'length' => 32,
+	    'not null' => TRUE,
+	    'default' => '0',
+	  ),
+	  'computer_mac_address' => array(
+	    'description' => 'The computer mac address of the primary nic card used for this license',
+	    'type' => 'varchar',
+	    'length' => 32,
+	    'not null' => TRUE,
+	    'default' => '0',
+	  ),
+    ),
+    'primary key' => array(
+      'license_id'
+    ),
+  );
+
+
+  $schema['revoked_license_t'] = array(
+    'description' => 'Stores information for revoked users',
+    'fields' => array(
+      'revoked_id' => array(
+        'description' => 'The revocation identifier.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+	  'revoked_email' => array(
+	    'description' => 'The revoked email.',
+  	    'type' => 'varchar',
+	    'length' => 32,
+		'not null' => TRUE,
+		'default' => '0',
+	  ),
+	  'revoked_order_number' => array(
+	    'description' => 'The revoked order number.',
+	    'type' => 'int',
+	    'not null' => TRUE,
+	    'default' => 0,
+	  ),	
+	),
+	'primary key' => array(
+      'revoked_id'
+    ),
+  );
+
+  return $schema;
+}
+
+
+/**
+ * Implementation of hook_install().
+ */
+function license_key_activation_install() {
+  drupal_install_schema('license_key_activation');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function license_key_activation_uninstall() {
+  drupal_uninstall_schema('license_key_activation');
+  db_query("DELETE FROM {variable} WHERE name LIKE 'license_key_activation_%%'");
+  cache_clear_all('variables', 'cache');
+}
+
+?>
